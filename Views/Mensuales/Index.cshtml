@@ -1,0 +1,155 @@
+﻿@using EstacionamientoWebApp.Models
+@model IEnumerable<Mensual>
+@{
+    ViewData["Title"] = "Mensuales";
+    var nuevo = ViewBag.Nuevo as Mensual ?? new Mensual();
+}
+
+<h2 class="mb-3">Mensuales</h2>
+
+@if (TempData["ok"] != null)
+{
+    <div class="alert alert-success">@TempData["ok"]</div>
+}
+
+<div class="row">
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-header">Nuevo Mensual</div>
+            <div class="card-body">
+                <form asp-action="Crear" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-2">
+                        <label asp-for="@nuevo.Nombre" class="form-label"></label>
+                        <input asp-for="@nuevo.Nombre" name="Nombre" class="form-control" />
+                        <span asp-validation-for="@nuevo.Nombre" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-2">
+                        <label asp-for="@nuevo.Patente" class="form-label"></label>
+                        <input asp-for="@nuevo.Patente" name="Patente" class="form-control" maxlength="10" />
+                        <span asp-validation-for="@nuevo.Patente" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-2">
+                        <label asp-for="@nuevo.Telefono" class="form-label"></label>
+                        <input asp-for="@nuevo.Telefono" name="Telefono" class="form-control" />
+                        <span asp-validation-for="@nuevo.Telefono" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-2">
+                        <label asp-for="@nuevo.PrecioMensual" class="form-label"></label>
+                        <input asp-for="@nuevo.PrecioMensual" name="PrecioMensual" class="form-control" />
+                        <span asp-validation-for="@nuevo.PrecioMensual" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 mb-2">
+                            <label asp-for="@nuevo.FechaInicio" class="form-label"></label>
+                            <input asp-for="@nuevo.FechaInicio" name="FechaInicio" class="form-control" type="date" />
+                            <span asp-validation-for="@nuevo.FechaInicio" class="text-danger"></span>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <label asp-for="@nuevo.FechaFin" class="form-label"></label>
+                            <input asp-for="@nuevo.FechaFin" name="FechaFin" class="form-control" type="date" />
+                            <span asp-validation-for="@nuevo.FechaFin" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input asp-for="@nuevo.Activo" name="Activo" class="form-check-input" />
+                        <label asp-for="@nuevo.Activo" class="form-check-label"></label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="@nuevo.Observaciones" class="form-label"></label>
+                        <textarea asp-for="@nuevo.Observaciones" name="Observaciones" class="form-control" rows="2"></textarea>
+                        <span asp-validation-for="@nuevo.Observaciones" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">Lista de Mensuales</div>
+            <div class="card-body">
+                <table class="table table-sm table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre</th>
+                            <th>Patente</th>
+                            <th>Tel.</th>
+                            <th>Inicio</th>
+                            <th>Fin</th>
+                            <th>Activo</th>
+                            <th class="text-end">Precio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in Model)
+                        {
+                            <tr>
+                                <td>@m.Id</td>
+                                <td>@m.Nombre</td>
+                                <td>@m.Patente</td>
+                                <td>@m.Telefono</td>
+                                <td>@(m.FechaInicio?.ToString("dd/MM/yyyy"))</td>
+                                <td>@(m.FechaFin?.ToString("dd/MM/yyyy"))</td>
+                                <td>@(m.Activo ? "Sí" : "No")</td>
+                                <td class="text-end">@m.PrecioMensual?.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (!Model.Any())
+                {
+                    <div class="text-muted">No hay mensuales registrados.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+@* @model IEnumerable<EstacionamientoWebApp.Models.Mensual>
+
+<h2>Mees</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Patente</th>
+            <th>Celular</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Fin</th>
+            <th>Monto</th>
+            <th>Dejó Llave</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Nombre</td>
+                <td>@item.Patente</td>
+                <td>@item.Celular</td>
+                <td>@item.Fecha.ToShortDateString()</td>
+                <td>@item.FechaVencimiento.ToShortDateString()</td>
+                <td>@item.Precio</td>
+                <td>@(item.DejoLlave ? "Sí" : "No")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+ *@

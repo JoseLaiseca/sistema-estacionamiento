@@ -1,0 +1,330 @@
+@{
+    ViewData["Title"] = "Configuración AFIP";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-gear"></i> Configuración AFIP
+            </h2>
+
+            <!-- Estado Actual -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle"></i> Estado Actual
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Entorno:</strong> 
+                                <span class="badge bg-@(ViewBag.EsProduccion ? "danger" : "warning")">
+                                    @ViewBag.Entorno
+                                </span>
+                            </p>
+                            <p><strong>Modo Demo:</strong> 
+                                <span class="badge bg-@(ViewBag.ModoDemo ? "info" : "success")">
+                                    @(ViewBag.ModoDemo ? "Activado" : "Desactivado")
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>CUIT Servicio:</strong> @(ViewBag.Verificaciones["Resumen"]?.GetType().GetProperty("CuitServicio")?.GetValue(ViewBag.Verificaciones["Resumen"]) ?? "N/A")</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verificaciones -->
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-circle"></i> Verificaciones de Conexión
+                    </h5>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-warning me-2" onclick="limpiarTokens()" title="Limpiar tokens almacenados para forzar la obtención de un nuevo token">
+                            <i class="bi bi-trash"></i> Limpiar Tokens
+                        </button>
+                        <button type="button" class="btn btn-sm btn-light" onclick="verificarConexiones()">
+                            <i class="bi bi-arrow-clockwise"></i> Verificar Ahora
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body" id="verificaciones">
+                    @{
+                        var verificaciones = ViewBag.Verificaciones as Dictionary<string, object>;
+                        if (verificaciones != null)
+                        {
+                            // Certificado
+                            var cert = verificaciones.ContainsKey("Certificado") ? verificaciones["Certificado"] : null;
+                            if (cert != null)
+                            {
+                                var certOk = cert.GetType().GetProperty("Ok")?.GetValue(cert) as bool? ?? false;
+                                var certMsg = cert.GetType().GetProperty("Mensaje")?.GetValue(cert)?.ToString() ?? "";
+                                var certRuta = cert.GetType().GetProperty("Ruta")?.GetValue(cert)?.ToString() ?? "";
+                                <div class="mb-3">
+                                    <h6>
+                                        <i class="bi bi-@(certOk ? "check-circle text-success" : "x-circle text-danger")"></i>
+                                        Certificado
+                                    </h6>
+                                    <p class="mb-1">@certMsg</p>
+                                    <small class="text-muted">Ruta: @certRuta</small>
+                                </div>
+                            }
+
+                            // WSAA
+                            var wsaa = verificaciones.ContainsKey("WSAA") ? verificaciones["WSAA"] : null;
+                            if (wsaa != null)
+                            {
+                                var wsaaOk = wsaa.GetType().GetProperty("Ok")?.GetValue(wsaa) as bool? ?? false;
+                                var wsaaMsg = wsaa.GetType().GetProperty("Mensaje")?.GetValue(wsaa)?.ToString() ?? "";
+                                <div class="mb-3">
+                                    <h6>
+                                        <i class="bi bi-@(wsaaOk ? "check-circle text-success" : "x-circle text-danger")"></i>
+                                        WSAA (Autenticación)
+                                    </h6>
+                                    <p class="mb-0">@wsaaMsg</p>
+                                </div>
+                            }
+
+                            // WSFE
+                            var wsfe = verificaciones.ContainsKey("WSFE") ? verificaciones["WSFE"] : null;
+                            if (wsfe != null)
+                            {
+                                var wsfeOk = wsfe.GetType().GetProperty("Ok")?.GetValue(wsfe) as bool? ?? false;
+                                var wsfeMsg = wsfe.GetType().GetProperty("Mensaje")?.GetValue(wsfe)?.ToString() ?? "";
+                                <div class="mb-3">
+                                    <h6>
+                                        <i class="bi bi-@(wsfeOk ? "check-circle text-success" : "x-circle text-danger")"></i>
+                                        WSFE (Facturación Electrónica)
+                                    </h6>
+                                    <p class="mb-0">@wsfeMsg</p>
+                                </div>
+                            }
+
+                            // WSP5
+                            var wsp5 = verificaciones.ContainsKey("WSP5") ? verificaciones["WSP5"] : null;
+                            if (wsp5 != null)
+                            {
+                                var wsp5Ok = wsp5.GetType().GetProperty("Ok")?.GetValue(wsp5) as bool? ?? false;
+                                var wsp5Msg = wsp5.GetType().GetProperty("Mensaje")?.GetValue(wsp5)?.ToString() ?? "";
+                                <div class="mb-3">
+                                    <h6>
+                                        <i class="bi bi-@(wsp5Ok ? "check-circle text-success" : "x-circle text-danger")"></i>
+                                        WSP5 (Padrón)
+                                    </h6>
+                                    <p class="mb-0">@wsp5Msg</p>
+                                </div>
+                            }
+
+                            // Token
+                            var token = verificaciones.ContainsKey("Token") ? verificaciones["Token"] : null;
+                            if (token != null)
+                            {
+                                var tokenOk = token.GetType().GetProperty("Ok")?.GetValue(token) as bool? ?? false;
+                                var tokenMsg = token.GetType().GetProperty("Mensaje")?.GetValue(token)?.ToString() ?? "";
+                                <div class="mb-3">
+                                    <h6>
+                                        <i class="bi bi-@(tokenOk ? "check-circle text-success" : "x-circle text-danger")"></i>
+                                        Token AFIP
+                                    </h6>
+                                    <p class="mb-0">@tokenMsg</p>
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- Cambio de Entorno -->
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-arrow-repeat"></i> Cambiar Entorno
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        <strong>⚠️ Importante:</strong> Antes de cambiar de entorno, asegúrate de que todas las verificaciones estén correctas.
+                        El sistema validará automáticamente las conexiones antes de permitir el cambio.
+                    </p>
+
+                    <div class="row mt-3">
+                        @if (ViewBag.ModoDemo)
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-primary">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">Demo → Homologación</h5>
+                                        <p class="card-text text-muted">Pasar a entorno de homologación (pruebas reales con AFIP)</p>
+                                        <button type="button" class="btn btn-primary" onclick="cambiarEntorno('Homologacion')">
+                                            <i class="bi bi-arrow-right"></i> Cambiar a Homologación
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else if (!ViewBag.EsProduccion)
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-warning">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">Homologación → Producción</h5>
+                                        <p class="card-text text-muted">Pasar a entorno de producción (facturación real)</p>
+                                        <button type="button" class="btn btn-warning" onclick="cambiarEntorno('Produccion')">
+                                            <i class="bi bi-arrow-right"></i> Cambiar a Producción
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-info">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">Homologación → Demo</h5>
+                                        <p class="card-text text-muted">Volver a modo demo (sin conexión con AFIP)</p>
+                                        <button type="button" class="btn btn-info" onclick="cambiarEntorno('Demo')">
+                                            <i class="bi bi-arrow-left"></i> Volver a Demo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-secondary">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">Producción → Homologación</h5>
+                                        <p class="card-text text-muted">Volver a entorno de homologación</p>
+                                        <button type="button" class="btn btn-secondary" onclick="cambiarEntorno('Homologacion')">
+                                            <i class="bi bi-arrow-left"></i> Volver a Homologación
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function verificarConexiones() {
+            const btn = event.target.closest('button');
+            const textoOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...';
+
+            fetch('/ConfiguracionAFIP/Verificar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': '@Html.AntiForgeryToken()'
+                },
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + data.mensaje);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('✗ Error al verificar: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            });
+        }
+
+        function limpiarTokens() {
+            if (!confirm('¿Está seguro de limpiar los tokens almacenados? Esto forzará la obtención de un nuevo token en la próxima solicitud.')) {
+                return;
+            }
+
+            const btn = event.target.closest('button');
+            const textoOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Limpiando...';
+
+            fetch('/ConfiguracionAFIP/LimpiarTokens', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': '@Html.AntiForgeryToken()'
+                },
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✓ ' + data.mensaje);
+                    // Opcional: verificar conexiones después de limpiar
+                    setTimeout(() => verificarConexiones(), 1000);
+                } else {
+                    alert('✗ Error: ' + data.mensaje);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('✗ Error al limpiar tokens: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            });
+        }
+
+        function cambiarEntorno(nuevoEntorno) {
+            if (!confirm(`¿Está seguro de cambiar el entorno a ${nuevoEntorno}?`)) {
+                return;
+            }
+
+            const btn = event.target.closest('button');
+            const textoOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Cambiando...';
+
+            fetch('/ConfiguracionAFIP/CambiarEntorno', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': '@Html.AntiForgeryToken()'
+                },
+                body: JSON.stringify({ nuevoEntorno: nuevoEntorno }),
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✓ ' + data.mensaje);
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + data.mensaje);
+                    if (data.verificaciones) {
+                        console.log('Verificaciones:', data.verificaciones);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('✗ Error al cambiar entorno: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            });
+        }
+    </script>
+}
+
+

@@ -1,0 +1,262 @@
+@model EstacionamientoWebApp.Models.Comprobante
+
+@{
+    ViewData["Title"] = "Factura Electrónica";
+}
+
+<div class="container mt-4">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["Warning"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="text-primary">
+                <i class="bi bi-receipt"></i> Comprobante @(Model.Estado == "Autorizado" ? "Autorizado" : Model.Estado)
+            </h3>
+            @if (Model.Estado == "Autorizado")
+            {
+                <span class="badge bg-success fs-6">AUTORIZADO</span>
+            }
+            else if (Model.Estado == "Rechazado")
+            {
+                <span class="badge bg-danger fs-6">RECHAZADO</span>
+            }
+            else
+            {
+                <span class="badge bg-warning text-dark fs-6">@Model.Estado.ToUpper()</span>
+            }
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <h5><i class="bi bi-receipt-cutoff"></i> Datos del Comprobante</h5>
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <th>Tipo:</th>
+                        <td>
+                            @switch (Model.TipoComprobante)
+                            {
+                                case 1: <span>01 - Factura A</span> break;
+                                case 6: <span>06 - Factura B</span> break;
+                                case 11: <span>11 - Factura C</span> break;
+                                default: <span>@Model.TipoComprobante</span> break;
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Punto de Venta:</th>
+                        <td>@Model.PuntoVenta</td>
+                    </tr>
+                    <tr>
+                        <th>Número:</th>
+                        <td><strong>@Model.PuntoVenta.ToString("D4")-@(Model.NumeroComprobante ?? "Pendiente")</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Fecha de Emisión:</th>
+                        <td>@Model.FechaEmision.ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="col-md-6">
+                <h5><i class="bi bi-person"></i> Datos del Cliente</h5>
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <th>CUIT:</th>
+                        <td>@(Model.CuitCliente ?? "Consumidor Final")</td>
+                    </tr>
+                    <tr>
+                        <th>Razón Social:</th>
+                        <td>@(Model.RazonSocialCliente ?? "Consumidor Final")</td>
+                    </tr>
+                    <tr>
+                        <th>Domicilio:</th>
+                        <td>@(Model.DomicilioCliente ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <th>Importe Total:</th>
+                        <td><strong class="fs-5 text-success">$@Model.ImporteTotal.ToString("N2")</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <hr />
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <h5><i class="bi bi-shield-check"></i> Datos AFIP</h5>
+                @if (!string.IsNullOrEmpty(Model.CAE))
+                {
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th>CAE:</th>
+                            <td><span class="text-success fw-bold fs-5">@Model.CAE</span></td>
+                        </tr>
+                        <tr>
+                            <th>Vencimiento CAE:</th>
+                            <td>@(Model.FechaVtoCAE?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        </tr>
+                        <tr>
+                            <th>Número:</th>
+                            <td><strong>@Model.PuntoVenta.ToString("D4")-@(Model.NumeroComprobante ?? "Pendiente")</strong></td>
+                        </tr>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted">Comprobante pendiente de autorización</p>
+                }
+            </div>
+
+            <div class="col-md-6 text-center">
+                <h5><i class="bi bi-qr-code"></i> Código de Autenticación</h5>
+                @if (!string.IsNullOrEmpty(Model.CAE))
+                {
+                    <img src="@Url.Action("GenerarQR", "Facturacion", new { id = Model.Id })" 
+                         alt="Código QR AFIP" 
+                         class="img-fluid p-2 border rounded shadow-sm" 
+                         style="max-width: 250px;" />
+                    <p class="text-muted small mt-2">Escanea este código para verificar la factura</p>
+                }
+                else
+                {
+                    <div class="border rounded p-4 bg-light">
+                        <i class="bi bi-qr-code-scan" style="font-size: 4rem; color: #ccc;"></i>
+                        <p class="text-muted mt-2">QR disponible después de la autorización</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <hr />
+
+        <h5><i class="bi bi-list-ul"></i> Detalles del Comprobante</h5>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Descripción</th>
+                        <th class="text-end">Cantidad</th>
+                        <th class="text-end">Precio Unitario</th>
+                        <th class="text-end">IVA %</th>
+                        <th class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var detalle in Model.Detalles)
+                    {
+                        <tr>
+                            <td>@(detalle.Descripcion ?? "-")</td>
+                            <td class="text-end">@detalle.Cantidad.ToString("N2")</td>
+                            <td class="text-end">$@detalle.PrecioUnitario.ToString("N2")</td>
+                            <td class="text-end">@detalle.AlicuotaIVA.ToString("N2")%</td>
+                            <td class="text-end">$@detalle.Subtotal.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th colspan="4" class="text-end">Subtotal Neto:</th>
+                        <th class="text-end">$@Model.ImporteNeto.ToString("N2")</th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-end">IVA:</th>
+                        <th class="text-end">$@Model.ImporteIVA.ToString("N2")</th>
+                    </tr>
+                    <tr class="table-success">
+                        <th colspan="4" class="text-end fs-5">Total:</th>
+                        <th class="text-end fs-5">$@Model.ImporteTotal.ToString("N2")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Observaciones))
+        {
+            <div class="alert alert-info mt-3">
+                <strong><i class="bi bi-info-circle"></i> Observaciones:</strong> @Model.Observaciones
+            </div>
+        }
+
+        <div class="mt-4 d-flex justify-content-end gap-2">
+            @* Permitir imprimir siempre, incluso si no está autorizado (para pruebas) *@
+            <button type="button" class="btn btn-outline-primary" onclick="imprimirDirecto(@Model.Id)">
+                <i class="bi bi-printer"></i> Imprimir Directo
+            </button>
+            <a asp-controller="Facturacion" asp-action="Imprimir" asp-route-id="@Model.Id" 
+               class="btn btn-outline-secondary" target="_blank">
+                <i class="bi bi-file-pdf"></i> Ver PDF
+            </a>
+            <a asp-controller="Ingreso" asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left-circle"></i> Volver
+            </a>
+            <a asp-action="Listar" class="btn btn-outline-secondary">
+                <i class="bi bi-list"></i> Ver Listado
+            </a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function imprimirDirecto(id) {
+            if (!confirm('¿Desea imprimir el comprobante directamente en la impresora térmica?')) {
+                return;
+            }
+
+            // Mostrar indicador de carga
+            const btn = event.target.closest('button');
+            const textoOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Imprimiendo...';
+
+            // Llamar al endpoint de impresión directa
+            fetch(`/Facturacion/ImprimirDirecto/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✓ ' + data.mensaje);
+                } else {
+                    alert('✗ Error: ' + data.mensaje);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('✗ Error al imprimir: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = textoOriginal;
+            });
+        }
+    </script>
+}
+

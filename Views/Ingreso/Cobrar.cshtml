@@ -1,0 +1,159 @@
+﻿@{
+    ViewData["Title"] = "Cobrar";
+}
+
+<div class="container mt-3">
+    <h3 class="mb-3">Cobrar por lector</h3>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-6">
+                    <label for="scanInput" class="form-label">Escaneá el código de barras</label>
+                    <input type="text" class="form-control" id="scanInput" placeholder="TipoId|Patente|yyyyMMddHHmm" autofocus />
+                    <div class="form-text">Ej: <code>1|AB123CD|202508081130</code></div>
+                </div>
+                <div class="col-md-2">
+                    <button id="btnCalcular" class="btn btn-primary w-100">Calcular</button>
+                </div>
+                <div class="col-md-2">
+                    <button id="btnLimpiar" class="btn btn-outline-secondary w-100">Limpiar</button>
+                </div>
+                <div class="col-md-2">
+                    <a class="btn btn-link w-100" href="@Url.Action("Index","Ingreso")">← Volver</a>
+                </div>
+            </div>
+
+            <div id="resultadoScan" class="alert mt-3 d-none"></div>
+
+            <div id="detalleCobro" class="mt-2 d-none">
+                <div class="row">
+                    <div class="col-md-3"><strong>Tipo:</strong> <span id="outTipo"></span></div>
+                    <div class="col-md-3"><strong>Patente:</strong> <span id="outPatente"></span></div>
+                    <div class="col-md-3"><strong>Entrada:</strong> <span id="outEntrada"></span></div>
+                    <div class="col-md-3"><strong>Ahora:</strong> <span id="outAhora"></span></div>
+                </div>
+                <div class="row mt-2">
+                    @* <div class="col-md-3"><strong>Minutos:</strong> <span id="outMin"></span></div> *@
+                    <div class="col-md-3"><strong>Tiempo:</strong> <span id="outHoras"></span></div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light border rounded text-center">
+                            <div class="text-muted">Importe</div>
+                            <div id="outMonto" class="display-4 fw-bold text-success">$ 0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <button id="btnImprimirTicket" class="btn btn-success btn-lg w-100 d-none">
+                            <i class="bi bi-printer"></i> Imprimir Ticket
+                        </button>
+                    </div>
+                    @* <div class="col-md-4"><strong>Importe:</strong> <span id="outMonto"></span></div> *@
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+      const $input = document.getElementById('scanInput');
+      const $btnCalcular = document.getElementById('btnCalcular');
+      const $btnLimpiar = document.getElementById('btnLimpiar');
+      const $resultado = document.getElementById('resultadoScan');
+      const $detalle = document.getElementById('detalleCobro');
+
+      const $outTipo = document.getElementById('outTipo');
+      const $outPatente = document.getElementById('outPatente');
+      const $outEntrada = document.getElementById('outEntrada');
+      const $outAhora = document.getElementById('outAhora');
+      const $outHoras = document.getElementById('outHoras');
+      // const $outMin = document.getElementById('outMin');
+      const $outMonto = document.getElementById('outMonto');
+      const $btnImprimir = document.getElementById('btnImprimirTicket');
+
+      function msg(ok, text){
+        $resultado.classList.remove('d-none', 'alert-success', 'alert-danger');
+        $resultado.classList.add(ok ? 'alert-success' : 'alert-danger');
+        $resultado.textContent = text;
+      }
+
+      function limpiar(){
+        $input.value = '';
+        $resultado.classList.add('d-none');
+        $detalle.classList.add('d-none');
+        $btnImprimir.classList.add('d-none');
+        $input.focus();
+      }
+
+      async function calcular(){
+        const codigo = ($input.value || '').trim();
+        if(!codigo){ msg(false,'Escaneá o escribí un código.'); return; }
+
+        try{
+          const resp = await fetch('/Ingreso/CalcularCobroCodigo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo })
+          });
+          const data = await resp.json();
+
+          if(!data.ok){
+            msg(false, data.mensaje || 'Error al calcular.');
+            $detalle.classList.add('d-none');
+            return;
+          }
+
+          msg(true, 'Cálculo OK. Podés cobrar.');
+          $outTipo.textContent = data.tipo;
+          $outPatente.textContent = data.patente;
+          $outEntrada.textContent = data.horaEntrada;
+          $outAhora.textContent = data.horaActual;
+          $outHoras.textContent = data.horas;
+          // $outMin.textContent = data.minutos;
+          $outMonto.textContent = new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS' }).format(data.monto);
+          $detalle.classList.remove('d-none');
+          $btnImprimir.classList.remove('d-none');
+          
+          // Guardar datos para la impresión
+          window.datosCobro = data;
+
+          // Si tu lector manda Enter, podés limpiar automáticamente:
+          // $input.value = '';
+        }catch(e){
+          msg(false, 'No se pudo conectar con el servidor.');
+          $detalle.classList.add('d-none');
+        }
+      }
+
+      async function imprimirTicket(){
+        if(!window.datosCobro){
+          msg(false, 'No hay datos para imprimir. Calculá primero.');
+          return;
+        }
+        
+        try{
+          const resp = await fetch('/Ingreso/ImprimirTicketCobro', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(window.datosCobro)
+          });
+          
+          if(resp.ok){
+            msg(true, 'Ticket enviado a imprimir correctamente.');
+          } else {
+            const error = await resp.json();
+            msg(false, error.mensaje || 'Error al imprimir el ticket.');
+          }
+        } catch(e){
+          msg(false, 'Error de conexión al imprimir.');
+        }
+      }
+
+      $btnCalcular.addEventListener('click', calcular);
+      $btnLimpiar.addEventListener('click', limpiar);
+      $btnImprimir.addEventListener('click', imprimirTicket);
+      $input.addEventListener('keydown', ev => {
+        if(ev.key === 'Enter'){ ev.preventDefault(); calcular(); }
+      });
+    })();
+</script>

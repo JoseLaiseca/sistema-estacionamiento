@@ -1,0 +1,497 @@
+@model EstacionamientoWebApp.Models.Comprobante
+
+@{
+    ViewData["Title"] = "Crear Factura Electrónica";
+}
+
+<div class="container mt-4">
+    <h2>@ViewData["Title"]</h2>
+    <hr />
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <form asp-action="Crear" method="post" id="formComprobante">
+        @Html.AntiForgeryToken()
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">Datos del Comprobante</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="PuntoVenta" class="form-label">Punto de Venta</label>
+                            <input asp-for="PuntoVenta" class="form-control" type="number" min="1" max="99999" />
+                            <span asp-validation-for="PuntoVenta" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="TipoComprobante" class="form-label">Tipo de Comprobante</label>
+                            <select asp-for="TipoComprobante" class="form-select">
+                                <option value="1">01 - Factura A</option>
+                                <option value="6" selected>06 - Factura B</option>
+                                <option value="11">11 - Factura C</option>
+                            </select>
+                            <span asp-validation-for="TipoComprobante" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="FechaEmision" class="form-label">Fecha de Emisión</label>
+                            <input asp-for="FechaEmision" class="form-control" type="date" />
+                            <span asp-validation-for="FechaEmision" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Concepto" class="form-label">Concepto</label>
+                            <select asp-for="Concepto" class="form-select">
+                                <option value="1" selected>1 - Productos</option>
+                                <option value="2">2 - Servicios</option>
+                                <option value="3">3 - Productos y Servicios</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">Datos del Cliente</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="TipoDoc" class="form-label">Tipo de Documento</label>
+                            <select asp-for="TipoDoc" class="form-control" id="tipoDocSelect">
+                                <option value="99">99 - Consumidor Final</option>
+                                <option value="96">96 - DNI</option>
+                                <option value="80">80 - CUIT</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="NumeroDoc" class="form-label">Número de Documento</label>
+                            <input asp-for="NumeroDoc" class="form-control" id="numeroDocInput" />
+                        </div>
+
+                        <div class="mb-3" id="cuitContainer" style="display:none;">
+                            <label asp-for="CuitCliente" class="form-label">CUIT Cliente</label>
+                            <div class="input-group">
+                                <input asp-for="CuitCliente" class="form-control" id="cuitInput" placeholder="20123456789" />
+                                <button type="button" class="btn btn-outline-secondary" id="btnConsultarCliente">
+                                    <i class="bi bi-search"></i> Consultar AFIP
+                                </button>
+                            </div>
+                            <span asp-validation-for="CuitCliente" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="RazonSocialCliente" class="form-label">Razón Social</label>
+                            <input asp-for="RazonSocialCliente" class="form-control" id="razonSocialCliente" />
+                            <small class="form-text text-muted">Puede completarse automáticamente consultando AFIP o ingresarse manualmente</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CondicionIVAReceptor" class="form-label">Condición IVA del Receptor (RG 5616)</label>
+                            <select asp-for="CondicionIVAReceptor" class="form-select" id="CondicionIVAReceptor">
+                                <option value="5" selected>Consumidor Final</option>
+                                <option value="1">Responsable Inscripto</option>
+                                <option value="6">Monotributo</option>
+                                <option value="4">Exento</option>
+                            </select>
+                            <small class="form-text text-muted">Obligatorio para AFIP (RG 5616). Si no sabés, usá "Consumidor Final".</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="DomicilioCliente" class="form-label">Domicilio</label>
+                            <input asp-for="DomicilioCliente" class="form-control" />
+                        </div>
+
+                        @* Campo oculto para CondicionIVA (se completa automáticamente al consultar AFIP) *@
+                        @Html.HiddenFor(m => m.CondicionIVA)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">Detalles del Comprobante</div>
+            <div class="card-body">
+                <div id="detallesContainer">
+                    @for (int i = 0; i < Model.Detalles.Count; i++)
+                    {
+                        <div class="row mb-3 detalle-item">
+                            <div class="col-md-4">
+                                <label class="form-label">Descripción</label>
+                                <input asp-for="Detalles[i].Descripcion" class="form-control" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Cantidad</label>
+                                <input asp-for="Detalles[i].Cantidad" class="form-control cantidad" type="number" step="0.01" min="0.01" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Precio Unitario (c/IVA)</label>
+                                <!-- Visible: el usuario escribe el precio CON IVA -->
+                                <input type="number"
+                                       class="form-control precioConIVA"
+                                       step="0.01"
+                                       min="0" />
+
+                                <!-- Oculto: se envía a la app el precio NETO (sin IVA) -->
+                                <input asp-for="Detalles[i].PrecioUnitario"
+                                       type="hidden"
+                                       class="precio" />
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">IVA %</label>
+                                <select asp-for="Detalles[i].AlicuotaIVA" class="form-select alicuota">
+                                    <option value="0">0%</option>
+                                    <option value="10.5">10.5%</option>
+                                    <option value="21" selected>21%</option>
+                                    <option value="27">27%</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Subtotal</label>
+                                <input type="text" class="form-control subtotal" readonly />
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAgregarDetalle">
+                    <i class="bi bi-plus"></i> Agregar Detalle
+                </button>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 offset-md-6">
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>Subtotal Neto:</strong>
+                            <span id="totalNeto">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>IVA:</strong>
+                            <span id="totalIVA">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <strong>Total:</strong>
+                            <span id="totalGeneral" class="fs-5 fw-bold">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Campos ocultos para enviar los totales al servidor *@
+        @Html.HiddenFor(m => m.ImporteNeto, new { id = "importeNetoHidden" })
+        @Html.HiddenFor(m => m.ImporteIVA, new { id = "importeIVAHidden" })
+        @Html.HiddenFor(m => m.ImporteTotal, new { id = "importeTotalHidden" })
+
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Generar y Autorizar Factura
+            </button>
+            <a asp-action="Listar" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Mostrar/ocultar campo CUIT según TipoDoc
+        document.addEventListener("DOMContentLoaded", function () {
+            const tipo = document.getElementById("tipoDocSelect");
+            const numero = document.getElementById("numeroDocInput");
+            const cuitDiv = document.getElementById("cuitContainer");
+            const cuitInput = document.getElementById("cuitInput");
+
+            function actualizarCampos() {
+                const condicionIVAReceptorField = document.getElementById('CondicionIVAReceptor');
+                
+                if (tipo.value === "80") {
+                    // CUIT
+                    cuitDiv.style.display = "block";
+                    numero.value = "";
+                    numero.disabled = true;
+                } else {
+                    // DNI o Consumidor Final
+                    cuitDiv.style.display = "none";
+                    cuitInput.value = "";
+                    numero.disabled = false;
+
+                    if (tipo.value === "99") {
+                        numero.value = "0"; // AFIP requiere número 0 para Consumidor Final
+                        // Si TipoDoc = 99 (Consumidor Final) → poner valor "5"
+                        if (condicionIVAReceptorField) {
+                            condicionIVAReceptorField.value = "5";
+                        }
+                    }
+                }
+            }
+
+            tipo.addEventListener("change", actualizarCampos);
+            actualizarCampos();
+        });
+
+        // Consultar cliente en AFIP
+        document.getElementById('btnConsultarCliente').addEventListener('click', async function(event) {
+            const cuit = document.getElementById('cuitInput').value.replace(/-/g, '').trim();
+            
+            if (!cuit || cuit.length !== 11) {
+                alert('Ingrese un CUIT válido (11 dígitos)');
+                return;
+            }
+
+            try {
+                const btnConsultar = event.target.closest('button');
+                const textoOriginal = btnConsultar.innerHTML;
+                btnConsultar.disabled = true;
+                btnConsultar.innerHTML = '<i class="bi bi-hourglass-split"></i> Consultando...';
+                
+                const response = await fetch(`/Facturacion/ConsultarCliente?cuit=${cuit}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    // Si es un error de padrón en Homologación, mostrar mensaje informativo pero permitir continuar
+                    if (data.error.includes('no está disponible en el padrón de Homologación') || 
+                        data.error.includes('No existe persona con ese Id')) {
+                        // Mostrar mensaje informativo pero NO bloquear
+                        const mensaje = '⚠️ El CUIT no está disponible en el padrón de Homologación.\n\n' +
+                                      'Esto es NORMAL en entorno de prueba.\n\n' +
+                                      '✅ PUEDES FACTURAR IGUAL:\n' +
+                                      'La facturación electrónica funciona independientemente del padrón.\n\n' +
+                                      'Puedes ingresar la razón social manualmente y continuar con la facturación.';
+                        alert(mensaje);
+                        // Limpiar el campo para que el usuario pueda ingresar manualmente
+                        document.getElementById('razonSocialCliente').value = '';
+                        document.getElementById('razonSocialCliente').focus();
+                    } else {
+                        // Otro tipo de error
+                        alert('Error: ' + data.error);
+                    }
+                } else {
+                    // Consulta exitosa
+                    document.getElementById('razonSocialCliente').value = data.razonSocial || '';
+                    // Guardar CondicionIVA si está disponible (campo oculto)
+                    if (data.condicionIVA) {
+                        const condicionIVAField = document.getElementById('CondicionIVA');
+                        if (condicionIVAField) {
+                            condicionIVAField.value = data.condicionIVA;
+                        }
+                    }
+                    // Actualizar CondicionIVAReceptor si está disponible
+                    if (data.condicionIVAReceptor) {
+                        const condicionIVAReceptorField = document.getElementById('CondicionIVAReceptor');
+                        if (condicionIVAReceptorField) {
+                            condicionIVAReceptorField.value = data.condicionIVAReceptor;
+                        }
+                    }
+                }
+            } catch (error) {
+                alert('Error al consultar AFIP: ' + error.message);
+            } finally {
+                // Restaurar botón
+                const btnConsultar = event.target?.closest('button');
+                if (btnConsultar) {
+                    btnConsultar.disabled = false;
+                    btnConsultar.innerHTML = '<i class="bi bi-search"></i> Consultar AFIP';
+                }
+            }
+        });
+
+        // Auto-setear Condición IVA según CUIT y tipo de comprobante
+        document.getElementById('TipoComprobante')?.addEventListener('change', function() {
+            const tipoComprobante = parseInt(this.value);
+            const condicionIVAReceptorField = document.getElementById('CondicionIVAReceptor');
+            const cuit = document.getElementById('cuitInput')?.value?.replace(/-/g, '').trim();
+
+            if (tipoComprobante === 11 || !cuit || cuit.length !== 11) {
+                condicionIVAReceptorField.value = "5"; // Consumidor Final
+            }
+        });
+
+        // CUANDO CAMBIA CUIT
+        document.getElementById('cuitInput')?.addEventListener('blur', function() {
+            const condicionIVAReceptorField = document.getElementById('CondicionIVAReceptor');
+            const cuit = this.value.replace(/-/g, '').trim();
+            const tipoComprobante = parseInt(document.getElementById('TipoComprobante').value);
+
+            if (!cuit || cuit.length !== 11 || tipoComprobante === 11) {
+                condicionIVAReceptorField.value = "5"; // CF
+            }
+        });
+
+        // ============================================
+        // CALCULAR TOTALES - PRECIOS NETOS (SIN IVA)
+        // ============================================
+        // Regla: El precio unitario es NETO, NO incluye IVA
+        // Fórmula por detalle:
+        //   subtotal = cantidad * precioUnitario (PRECIO NETO)
+        //   importeIVA = subtotal * (alicuotaIVA / 100)
+        //   totalFila = subtotal + importeIVA
+        // Total general:
+        //   totalNeto = suma de todos los subtotales
+        //   totalIVA = suma de todos los importeIVA
+        //   totalGeneral = totalNeto + totalIVA
+        // ============================================
+                function calcularTotales() {
+            let totalNeto = 0;
+            let totalIVA = 0;
+
+            document.querySelectorAll('.detalle-item').forEach(item => {
+
+                const cantidad = parseFloat(item.querySelector('.cantidad')?.value) || 0;
+
+                // Precio que escribe el usuario (CON IVA)
+                const precioConIVA = parseFloat(item.querySelector('.precioConIVA')?.value) || 0;
+
+                // Alicuota IVA seleccionada
+                const alicuotaIVA = parseFloat(item.querySelector('.alicuota')?.value) || 0;
+
+                // ► Calcular precio NETO: precioConIVA / (1 + IVA/100)
+                // Ej: 121 / 1.21 = 100
+                const precioNeto = alicuotaIVA > 0
+                    ? precioConIVA / (1 + (alicuotaIVA / 100))
+                    : precioConIVA;
+
+                // ► Guardar el NETO en el hidden .precio (esto va al backend y a AFIP)
+                item.querySelector('.precio').value = precioNeto.toFixed(2);
+
+                // ► Subtotal NETO
+                const subtotal = cantidad * precioNeto;
+
+                // ► IVA del subtotal
+                const importeIVA = subtotal * (alicuotaIVA / 100);
+
+                // Mostrar subtotal (NETO)
+                item.querySelector('.subtotal').value = subtotal.toFixed(2);
+
+                // Acumular totales
+                totalNeto += subtotal;
+                totalIVA += importeIVA;
+            });
+
+            // ► Mostrar totales en pantalla
+            document.getElementById('totalNeto').textContent = '$' + totalNeto.toFixed(2);
+            document.getElementById('totalIVA').textContent = '$' + totalIVA.toFixed(2);
+            document.getElementById('totalGeneral').textContent = '$' + (totalNeto + totalIVA).toFixed(2);
+
+            // ► Enviar totales al backend
+            document.getElementById('importeNetoHidden').value = totalNeto.toFixed(2);
+            document.getElementById('importeIVAHidden').value = totalIVA.toFixed(2);
+            document.getElementById('importeTotalHidden').value = (totalNeto + totalIVA).toFixed(2);
+        }
+
+
+        // Agregar detalle
+        document.getElementById('btnAgregarDetalle').addEventListener('click', function() {
+            const container = document.getElementById('detallesContainer');
+            const index = container.children.length;
+
+                            const nuevoDetalle = `
+            <div class="row mb-3 detalle-item">
+                <div class="col-md-4">
+                    <label class="form-label">Descripción</label>
+                    <input name="Detalles[${index}].Descripcion" class="form-control" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Cantidad</label>
+                    <input name="Detalles[${index}].Cantidad"
+                           class="form-control cantidad"
+                           type="number" step="0.01" min="0.01" value="1" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Precio Unitario (c/IVA)</label>
+
+                    <!-- Usuario escribe el precio CON IVA -->
+                    <input type="number"
+                           class="form-control precioConIVA"
+                           step="0.01" min="0" />
+
+                    <!-- Se envía el PRECIO NETO al servidor -->
+                    <input type="hidden"
+                           name="Detalles[${index}].PrecioUnitario"
+                           class="precio" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">IVA %</label>
+                    <select name="Detalles[${index}].AlicuotaIVA"
+                            class="form-select alicuota">
+                        <option value="0">0%</option>
+                        <option value="10.5">10.5%</option>
+                        <option value="21" selected>21%</option>
+                        <option value="27">27%</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Subtotal</label>
+                    <input type="text"
+                           class="form-control subtotal"
+                           readonly />
+                </div>
+            </div>
+        `;
+
+
+            
+            container.insertAdjacentHTML('beforeend', nuevoDetalle);
+            // Recalcular después de agregar el detalle
+            calcularTotales();
+        });
+
+        // Event listeners para calcular totales usando delegación de eventos
+        // Esto funciona tanto para elementos existentes como para los agregados dinámicamente
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('cantidad') || 
+                e.target.classList.contains('precio') || 
+                e.target.classList.contains('alicuota')) {
+                calcularTotales();
+            }
+        });
+
+        // También escuchar cambios en select (alicuota)
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('alicuota')) {
+                calcularTotales();
+            }
+        });
+
+        // Calcular al cargar
+        calcularTotales();
+
+        // ⚠️ CRÍTICO: Asegurar que los totales se calculen y actualicen ANTES de enviar el formulario
+        document.getElementById('formComprobante').addEventListener('submit', function(e) {
+            // Recalcular una última vez antes de enviar
+            calcularTotales();
+            
+            // Log en consola para debugging
+            const importeNeto = document.getElementById('importeNetoHidden')?.value || '0';
+            const importeIVA = document.getElementById('importeIVAHidden')?.value || '0';
+            const importeTotal = document.getElementById('importeTotalHidden')?.value || '0';
+            
+            console.log('📤 Enviando al servidor:', {
+                ImporteNeto: importeNeto,
+                ImporteIVA: importeIVA,
+                ImporteTotal: importeTotal
+            });
+        });
+    </script>
+}

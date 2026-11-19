@@ -1,0 +1,1128 @@
+﻿@model EstacionamientoWebApp.Models.IngresoViewModel
+
+@using EstacionamientoWebApp.Models
+
+@{
+    ViewData["Title"] = "Ingreso";
+}
+
+<ul class="nav nav-tabs" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="form-tab" data-bs-toggle="tab" data-bs-target="#formulario" type="button" role="tab">Nuevo Ingreso</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tabla-tab" data-bs-toggle="tab" data-bs-target="#tabla" type="button" role="tab">Ingresos Registrados</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="estadia-tab" data-bs-toggle="tab" data-bs-target="#estadia" type="button" role="tab">Estadía Prolongada</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="mensual-tab" data-bs-toggle="tab" data-bs-target="#mensual" type="button" role="tab">Nuevo Mensual</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="mensuales-registrados-tab" data-bs-toggle="tab" data-bs-target="#mensuales-registrados" type="button" role="tab">Mensuales Registrados</button>
+    </li>
+
+   
+</ul>
+
+<div class="tab-content mt-4" id="myTabContent">
+    <!-- Pestaña 1: Formulario de ingreso simple -->
+    <div class="tab-pane fade show active" id="formulario" role="tabpanel">
+        <h3>Ingreso de vehículo</h3>
+        <p class="text-muted">
+            <strong>Fecha y hora actual:</strong> @DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")
+        </p>
+
+
+        <form asp-controller="Ingreso" asp-action="Guardar" method="post">
+            <div class="mb-3">
+                <div class="col-md-6">
+                    <label>Tipo de Vehículo</label>
+                    <select name="TipoVehiculo" class="form-select" required>
+                        <option value="">-- Seleccionar --</option>
+                        <option>Moto</option>
+                        <option>Auto</option>
+                        <option>Camioneta</option>
+                        <option>Utilitario</option>
+                        <option>Combi</option>
+                    </select>
+                </div>
+                <div class="col-mb-6">
+                    <label>Patente</label>
+                    <input type="text" name="Patente" class="form-control" maxlength="8" />
+                </div>
+                <div class="col-mb-6">
+                    <label>Descripción</label>
+                    <input type="text" name="Descripcion" class="form-control" />
+                </div>
+                <div class="d-flex gap-2">
+
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="submit" formaction="/Ingreso/ImprimirRecienIngresado" class="btn btn-success">Imprimir</button>
+                    <a asp-action="Cancelar" class="btn btn-secondary">Cancelar</a>
+                </div>
+                <a class="btn btn-success btn-lg w-100 d-inline-flex align-items-center justify-content-center gap-2"
+                   href="@Url.Action("Cobrar","Ingreso")">
+                    <i class="bi bi-upc-scan"></i> Ir a Cobrar
+                </a>
+
+
+
+            </div>
+        </form>
+
+       
+    </div>
+
+    <!-- Pestaña 2: Tabla de ingresos -->
+    <div class="tab-pane fade" id="tabla" role="tabpanel">
+        <h3>Ingresos recientes</h3>
+        <!-- 🟡 Formulario de filtro por fecha -->
+        <form method="get" asp-controller="Ingreso" asp-action="Index" class="row g-3 mb-4">
+            <div class="col-auto">
+                <label for="fecha" class="form-label">Filtrar por fecha:</label>
+                <input type="date" name="fecha" id="fecha" class="form-control"
+                       value="@Model.FechaFiltro?.ToString("yyyy-MM-dd")" />
+                
+
+
+                @* value="@Request.Query["fecha"]" /> *@
+            </div>
+            <a class="btn btn-warning btn-lg w-100 d-inline-flex align-items-center justify-content-center gap-2"
+               href="@Url.Action("Cobrar","Ingreso")">
+                <i class="bi bi-upc-scan"></i> Ir a Cobrar
+            </a>
+
+            <div class="col-auto d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+            </div>
+            <div class="col-auto d-flex align-items-end">
+                <!-- Este botón resetea el filtro -->
+                <a href="@Url.Action("Index", "Ingreso")" class="btn btn-secondary">Quitar Filtro</a>
+            </div>
+        </form>
+        <form method="get" class="row g-2 align-items-end mb-3">
+            <div class="col-auto">
+                <label for="fecha" class="form-label mb-0">Ver ingresos del día</label>
+                <input type="date"
+                       id="fecha"
+                       name="fecha"
+                       class="form-control"
+                       value="@(Model.FechaFiltro?.ToString("yyyy-MM-dd"))" />
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Buscar</button>
+            </div>
+
+            <div class="col-auto">
+                <a class="btn btn-outline-secondary"
+                   href="@Url.Action("Index","Ingreso", new { fecha = DateTime.Today.ToString("yyyy-MM-dd") })">
+                    Hoy
+                </a>
+            </div>
+
+            <div class="col-auto">
+                <button type="button" id="btnAyer" class="btn btn-outline-secondary">Ayer</button>
+            </div>
+        </form>
+
+        <script>
+            document.getElementById('btnAyer')?.addEventListener('click', () => {
+              const d = new Date();
+              d.setDate(d.getDate() - 1);
+              const yyyy = d.getFullYear();
+              const mm = String(d.getMonth()+1).padStart(2,'0');
+              const dd = String(d.getDate()).padStart(2,'0');
+              const input = document.getElementById('fecha');
+              input.value = `${yyyy}-${mm}-${dd}`;
+              input.form.submit();
+            });
+
+            // enter en el date = submit
+            document.getElementById('fecha')?.addEventListener('keydown', (ev)=>{
+              if (ev.key === 'Enter') { ev.preventDefault(); ev.target.form.submit(); }
+            });
+        </script>
+
+        @if (Model.Ingresos != null && Model.Ingresos.Count > 0)
+
+        {
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Patente</th>
+                        <th>Descripción</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var ingreso in Model.Ingresos)
+                    {
+                        <tr>
+                            <td>@ingreso.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@ingreso.TipoVehiculo</td>
+                            <td>@(ingreso.Patente ?? "-")</td>
+                            <td>@(ingreso.Descripcion ?? "-")</td>                        
+                            <td>
+                                <button class="btn btn-danger btn-sm" onclick="eliminarRegistro(@ingreso.Id)">Eliminar</button>
+                                <button class="btn btn-primary btn-sm" onclick="imprimirRegistro(@ingreso.Id)">Imprimir</button>
+                                <a asp-controller="Facturacion"
+                                   asp-action="Crear"
+                                   asp-route-ingresoId="@ingreso.Id"
+                                   class="btn btn-sm btn-success">
+                                    <i class="bi bi-receipt"></i> Generar Factura AFIP
+                                </a>
+                            </td>
+                        </tr>
+
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="alert alert-info">No hay ingresos registrados.</div>
+        }
+    </div>
+
+    <!-- Pestaña 3: Formulario estadía prolongada -->
+    <div class="tab-pane fade" id="estadia" role="tabpanel">
+        <h3>Estadía prolongada</h3>
+        
+        <!-- Formulario de nueva estadía -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Nueva Estadía</h5>
+            </div>
+            <div class="card-body">
+        <form method="post" asp-action="GuardarEstadia">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label asp-for="Estadia.NombreCliente" class="form-label">Nombre del Cliente</label>
+                    <input asp-for="Estadia.NombreCliente" class="form-control" required />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Estadia.Celular" class="form-label">Celular</label>
+                    <input asp-for="Estadia.Celular" class="form-control" required />
+                </div>
+            </div>
+            <div class="row mb-3">
+                        <div class="col-md-4">
+                    <label asp-for="Estadia.Patente" class="form-label">Patente</label>
+                    <input asp-for="Estadia.Patente" class="form-control" required />
+                </div>
+                        <div class="col-md-4">
+                            <label asp-for="Estadia.TipoVehiculo" class="form-label">Tipo de Vehículo</label>
+                            <select asp-for="Estadia.TipoVehiculo" class="form-select" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="Auto">Auto</option>
+                                <option value="Moto">Moto</option>
+                                <option value="Camioneta">Camioneta</option>
+                                <option value="Combi">Combi</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                    <label asp-for="Estadia.Descripcion" class="form-label">Descripción</label>
+                    <input asp-for="Estadia.Descripcion" class="form-control" />
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                            <label asp-for="Estadia.DejoLlave" class="form-label">¿Llave?</label>
+                    <select asp-for="Estadia.DejoLlave" class="form-select" required>
+                        <option value="true">Sí</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Estadia.DiasEstadia" class="form-label">Días de estadía</label>
+                    <input asp-for="Estadia.DiasEstadia" type="number" class="form-control" required min="1" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Estadia.Monto" class="form-label">Monto ($)</label>
+                    <input asp-for="Estadia.Monto" type="number" class="form-control" step="0.01" required />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar estadía</button>
+        </form>
+            </div>
+        </div>
+
+        <!-- Tabla de estadías registradas -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Estadías Registradas</h5>
+                <button type="button" id="btnRecargarEstadias" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-arrow-clockwise"></i> Recargar
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Filtros -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="filtroPatenteEstadia" class="form-label">Patente:</label>
+                        <input type="text" id="filtroPatenteEstadia" class="form-control" placeholder="Buscar por patente...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filtroClienteEstadia" class="form-label">Cliente:</label>
+                        <input type="text" id="filtroClienteEstadia" class="form-control" placeholder="Buscar por nombre...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="filtroFechaEstadia" class="form-label">Fecha:</label>
+                        <input type="date" id="filtroFechaEstadia" class="form-control">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" id="btnFiltrarEstadias" class="btn btn-primary me-2">Filtrar</button>
+                        <button type="button" id="btnLimpiarFiltrosEstadias" class="btn btn-outline-secondary">Limpiar</button>
+                    </div>
+                </div>
+
+                <!-- Tabla de estadías -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="tablaEstadias">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Celular</th>
+                                <th>Patente</th>
+                                <th>Tipo</th>
+                                <th>Días</th>
+                                <th>Monto</th>
+                                <th>Llave</th>
+                                <th>Descripción</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyEstadias">
+                            <!-- Los datos se cargarán dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para editar estadía -->
+        <div class="modal fade" id="modalEditarEstadia" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar Estadía</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="formEditarEstadia">
+                        <div class="modal-body">
+                            <input type="hidden" id="editEstadiaId" name="Id">
+                            
+                            <div class="mb-3">
+                                <label for="editEstadiaNombre" class="form-label">Nombre del Cliente</label>
+                                <input type="text" id="editEstadiaNombre" name="NombreCliente" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editEstadiaCelular" class="form-label">Celular</label>
+                                <input type="text" id="editEstadiaCelular" name="Celular" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editEstadiaPatente" class="form-label">Patente</label>
+                                <input type="text" id="editEstadiaPatente" name="Patente" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editEstadiaTipoVehiculo" class="form-label">Tipo de Vehículo</label>
+                                <select id="editEstadiaTipoVehiculo" name="TipoVehiculo" class="form-select" required>
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="Auto">Auto</option>
+                                    <option value="Moto">Moto</option>
+                                    <option value="Camioneta">Camioneta</option>
+                                    <option value="Combi">Combi</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editEstadiaDescripcion" class="form-label">Descripción</label>
+                                <input type="text" id="editEstadiaDescripcion" name="Descripcion" class="form-control">
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="editEstadiaDejoLlave" class="form-label">¿Llave?</label>
+                                    <select id="editEstadiaDejoLlave" name="DejoLlave" class="form-select" required>
+                                        <option value="true">Sí</option>
+                                        <option value="false">No</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="editEstadiaDias" class="form-label">Días de estadía</label>
+                                    <input type="number" id="editEstadiaDias" name="DiasEstadia" class="form-control" required min="1">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editEstadiaMonto" class="form-label">Monto ($)</label>
+                                <input type="number" id="editEstadiaMonto" name="Monto" class="form-control" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestaña 4: Formulario mensuales -->
+    <div class="tab-pane fade" id="mensual" role="tabpanel">
+        <h3>Mensuales</h3>
+        <!-- 👇 CAMBIO: especifico controller + token + resumen de validación -->
+        <form method="post" asp-controller="Ingreso" asp-action="GuardarMensual">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label asp-for="Mensual.Vehiculo" class="form-label">Tipo de Vehículo</label>
+                    <select asp-for="Mensual.Vehiculo" class="form-select" required>
+                        <option value="">-- Seleccionar --</option>
+                        <option>Auto</option>
+                        <option>Camioneta</option>
+                        <option>Moto</option>
+                        <option>Combi</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Mensual.Patente" class="form-label">Patente</label>
+                    <input asp-for="Mensual.Patente" class="form-control" maxlength="8" required />
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label asp-for="Mensual.Nombre" class="form-label">Nombre del Cliente</label>
+                    <input asp-for="Mensual.Nombre" class="form-control" required />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Mensual.Precio" class="form-label">Precio ($)</label>
+                    <input asp-for="Mensual.Precio" type="number" class="form-control" step="0.01" required />
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <label asp-for="Mensual.Descripcion" class="form-label">Descripción</label>
+                    <input asp-for="Mensual.Descripcion" class="form-control" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar mensual</button>
+        </form>
+    </div>
+
+    <!-- Pestaña 5: Lista de mensuales registrados -->
+    <div class="tab-pane fade" id="mensuales-registrados" role="tabpanel">
+        <h3>Mensuales Registrados</h3>
+        
+        <!-- Filtros -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label for="filtroEstado" class="form-label">Estado:</label>
+                <select id="filtroEstado" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="activo">Activos</option>
+                    <option value="inactivo">Inactivos</option>
+                    <option value="vencido">Vencidos</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="filtroPatente" class="form-label">Patente:</label>
+                <input type="text" id="filtroPatente" class="form-control" placeholder="Buscar por patente...">
+            </div>
+            <div class="col-md-3">
+                <label for="filtroCliente" class="form-label">Cliente:</label>
+                <input type="text" id="filtroCliente" class="form-control" placeholder="Buscar por nombre...">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="button" id="btnFiltrar" class="btn btn-primary me-2">Filtrar</button>
+                <button type="button" id="btnLimpiarFiltros" class="btn btn-outline-secondary">Limpiar</button>
+            </div>
+        </div>
+
+        <!-- Tabla de mensuales -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="tablaMensuales">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Fecha</th>
+                                <th>Vehículo</th>
+                                <th>Patente</th>
+                                <th>Cliente</th>
+                                <th>Precio</th>
+                                <th>Descripción</th>
+                                <th>Vencimiento</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                <tbody id="tbodyMensuales">
+                    <!-- Los datos se cargarán dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Modal para editar mensual -->
+        <div class="modal fade" id="modalEditarMensual" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar Mensual</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="formEditarMensual">
+                        <div class="modal-body">
+                            <input type="hidden" id="editId" name="Id">
+                            
+                            <div class="mb-3">
+                                <label for="editVehiculo" class="form-label">Tipo de Vehículo</label>
+                                <select id="editVehiculo" name="Vehiculo" class="form-select" required>
+                                    <option value="">-- Seleccionar --</option>
+                                    <option value="Auto">Auto</option>
+                                    <option value="Camioneta">Camioneta</option>
+                                    <option value="Moto">Moto</option>
+                                    <option value="Combi">Combi</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editPatente" class="form-label">Patente</label>
+                                <input type="text" id="editPatente" name="Patente" class="form-control" maxlength="8" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editNombre" class="form-label">Nombre del Cliente</label>
+                                <input type="text" id="editNombre" name="Nombre" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editPrecio" class="form-label">Precio ($)</label>
+                                <input type="number" id="editPrecio" name="Precio" class="form-control" step="0.01" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editDescripcion" class="form-label">Descripción</label>
+                                <input type="text" id="editDescripcion" name="Descripcion" class="form-control">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editFechaVencimiento" class="form-label">Fecha de Vencimiento</label>
+                                <input type="date" id="editFechaVencimiento" name="FechaVencimiento" class="form-control" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" id="editActivo" name="Activo" class="form-check-input">
+                                    <label for="editActivo" class="form-check-label">Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Leer pestaña activa desde localStorage
+        var activeTab = localStorage.getItem("activeTab");
+        if (activeTab) {
+            var tab = document.querySelector(`#myTab button[data-bs-target="${activeTab}"]`);
+            if (tab) {
+                new bootstrap.Tab(tab).show();
+            }
+        }
+
+        // Guardar la pestaña activa cuando se cambia
+        document.querySelectorAll('#myTab button[data-bs-toggle="tab"]').forEach(function (tab) {
+            tab.addEventListener("shown.bs.tab", function (e) {
+                localStorage.setItem("activeTab", e.target.getAttribute("data-bs-target"));
+            });
+        });
+    });
+</script>
+<script>
+    function eliminarRegistro(id) {
+        if (!confirm("¿Seguro que quieres eliminar este registro?")) return;
+
+        fetch(`/Ingreso/Eliminar/${id}`, {
+            method: 'DELETE'
+        })
+        .then(r => {
+            if (r.ok) {
+                alert("Registro eliminado");
+                location.reload();
+            } else {
+                alert("Error al eliminar");
+            }
+        });
+    }
+
+    function imprimirRegistro(id) {
+    fetch(`/Ingreso/ImprimirGuardado/${id}`)
+        .then(r => {
+            if (r.ok) {
+                alert("Ticket enviado a imprimir");
+            } else {
+                alert("Error al imprimir");
+            }
+        })
+        .catch(err => alert("Error: " + err));
+}
+
+
+    // ===== FUNCIONALIDAD PARA MENSUALES REGISTRADOS =====
+    
+    // Cargar mensuales al mostrar la pestaña
+    document.getElementById('mensuales-registrados-tab')?.addEventListener('shown.bs.tab', function() {
+        cargarMensuales();
+    });
+
+    // Limpiar modal cuando se cierre
+    document.getElementById('modalEditarMensual')?.addEventListener('hidden.bs.modal', function() {
+        // Limpiar el formulario
+        const form = document.getElementById('formEditarMensual');
+        if (form) {
+            form.reset();
+        }
+    });
+
+    // Cargar mensuales desde el servidor
+    async function cargarMensuales() {
+        try {
+            const response = await fetch('/Ingreso/ObtenerMensuales');
+            const mensuales = await response.json();
+            mostrarMensuales(mensuales);
+        } catch (error) {
+            console.error('Error al cargar mensuales:', error);
+            alert('Error al cargar los mensuales');
+        }
+    }
+
+    // Mostrar mensuales en la tabla
+    function mostrarMensuales(mensuales) {
+        const tbody = document.getElementById('tbodyMensuales');
+        tbody.innerHTML = '';
+
+        if (mensuales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center">No hay mensuales registrados</td></tr>';
+            return;
+        }
+
+        mensuales.forEach(mensual => {
+            const row = document.createElement('tr');
+            
+            // Determinar estado y clase CSS
+            let estado = 'Activo';
+            let estadoClass = 'text-success';
+            if (!mensual.activo) {
+                estado = 'Inactivo';
+                estadoClass = 'text-secondary';
+            } else if (new Date(mensual.fechaVencimiento) < new Date()) {
+                estado = 'Vencido';
+                estadoClass = 'text-warning';
+            }
+
+            row.innerHTML = `
+                <td>${mensual.id}</td>
+                <td>${new Date(mensual.fecha).toLocaleDateString('es-AR')}</td>
+                <td>${mensual.vehiculo}</td>
+                <td>${mensual.patente}</td>
+                <td>${mensual.nombre}</td>
+                <td>$${mensual.precio.toLocaleString('es-AR')}</td>
+                <td>${mensual.descripcion || '-'}</td>
+                <td>${new Date(mensual.fechaVencimiento).toLocaleDateString('es-AR')}</td>
+                <td><span class="${estadoClass}">${estado}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-primary me-1" onclick="editarMensual(${mensual.id})">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button class="btn btn-sm btn-danger me-1" onclick="eliminarMensualDesdeTabla(${mensual.id})">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="imprimirMensual(${mensual.id})">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Editar mensual
+    async function editarMensual(id) {
+        try {
+            const response = await fetch(`/Ingreso/ObtenerMensual/${id}`);
+            const mensual = await response.json();
+            
+            // Llenar el modal con los datos
+            document.getElementById('editId').value = mensual.id;
+            document.getElementById('editVehiculo').value = mensual.vehiculo;
+            document.getElementById('editPatente').value = mensual.patente;
+            document.getElementById('editNombre').value = mensual.nombre;
+            document.getElementById('editPrecio').value = mensual.precio;
+            document.getElementById('editDescripcion').value = mensual.descripcion || '';
+            document.getElementById('editFechaVencimiento').value = mensual.fechaVencimiento.split('T')[0];
+            document.getElementById('editActivo').checked = mensual.activo;
+            
+            // Mostrar el modal
+            new bootstrap.Modal(document.getElementById('modalEditarMensual')).show();
+        } catch (error) {
+            console.error('Error al cargar mensual:', error);
+            alert('Error al cargar los datos del mensual');
+        }
+    }
+
+    // Guardar cambios del mensual editado
+    document.getElementById('formEditarMensual')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Recopilar datos manualmente para manejar correctamente los checkboxes
+        const data = {
+            Id: parseInt(document.getElementById('editId').value),
+            Vehiculo: document.getElementById('editVehiculo').value,
+            Patente: document.getElementById('editPatente').value,
+            Nombre: document.getElementById('editNombre').value,
+            Precio: parseFloat(document.getElementById('editPrecio').value),
+            Descripcion: document.getElementById('editDescripcion').value,
+            FechaVencimiento: document.getElementById('editFechaVencimiento').value,
+            Activo: document.getElementById('editActivo').checked
+        };
+        
+        console.log('Datos a enviar:', data); // Para debug
+        
+        try {
+            const response = await fetch('/Ingreso/ActualizarMensual', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                alert('Mensual actualizado correctamente');
+                // Cerrar el modal correctamente
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarMensual'));
+                if (modal) {
+                    modal.hide();
+                }
+                cargarMensuales(); // Recargar la lista
+            } else {
+                const errorData = await response.json();
+                console.error('Error del servidor:', errorData);
+                alert('Error al actualizar el mensual: ' + (errorData.mensaje || 'Error desconocido'));
+            }
+        } catch (error) {
+            console.error('Error al actualizar mensual:', error);
+            alert('Error al actualizar el mensual');
+        }
+    });
+
+    // Eliminar mensual desde la tabla
+    function eliminarMensualDesdeTabla(id) {
+        if (!confirm("¿Seguro que quieres eliminar este mensual?")) return;
+
+        fetch(`/Ingreso/EliminarMensual/${id}`, {
+            method: 'DELETE'
+        })
+        .then(r => {
+            if (r.ok) {
+                alert("Mensual eliminado");
+                cargarMensuales(); // Recargar la lista
+            } else {
+                alert("Error al eliminar");
+            }
+        });
+    }
+
+    // Imprimir mensual
+    async function imprimirMensual(id) {
+        try {
+            const response = await fetch(`/Ingreso/ImprimirMensual/${id}`);
+            if (response.ok) {
+                alert('Factura de mensual enviada a imprimir correctamente');
+            } else {
+                const error = await response.json();
+                alert('Error al imprimir: ' + (error.mensaje || 'Error desconocido'));
+            }
+        } catch (error) {
+            console.error('Error al imprimir mensual:', error);
+            alert('Error de conexión al imprimir');
+        }
+    }
+
+    // Filtros - con verificación de existencia
+    const btnFiltrar = document.getElementById('btnFiltrar');
+    const btnLimpiarFiltros = document.getElementById('btnLimpiarFiltros');
+    
+    if (btnFiltrar) {
+        btnFiltrar.addEventListener('click', function() {
+            aplicarFiltros();
+        });
+    }
+
+    if (btnLimpiarFiltros) {
+        btnLimpiarFiltros.addEventListener('click', function() {
+            const filtroEstado = document.getElementById('filtroEstado');
+            const filtroPatente = document.getElementById('filtroPatente');
+            const filtroCliente = document.getElementById('filtroCliente');
+            
+            if (filtroEstado) filtroEstado.value = '';
+            if (filtroPatente) filtroPatente.value = '';
+            if (filtroCliente) filtroCliente.value = '';
+            cargarMensuales();
+        });
+    }
+
+    async function aplicarFiltros() {
+        const filtroEstado = document.getElementById('filtroEstado');
+        const filtroPatente = document.getElementById('filtroPatente');
+        const filtroCliente = document.getElementById('filtroCliente');
+        
+        const estado = filtroEstado ? filtroEstado.value : '';
+        const patente = filtroPatente ? filtroPatente.value : '';
+        const cliente = filtroCliente ? filtroCliente.value : '';
+        
+        try {
+            const params = new URLSearchParams();
+            if (estado) params.append('estado', estado);
+            if (patente) params.append('patente', patente);
+            if (cliente) params.append('cliente', cliente);
+            
+            const response = await fetch(`/Ingreso/ObtenerMensuales?${params}`);
+            const mensuales = await response.json();
+            mostrarMensuales(mensuales);
+        } catch (error) {
+            console.error('Error al filtrar mensuales:', error);
+            alert('Error al aplicar filtros');
+        }
+    }
+
+    // ===== FUNCIONALIDAD PARA ESTADÍAS =====
+    
+    // Cargar estadías al mostrar la pestaña
+    document.getElementById('estadia-tab')?.addEventListener('shown.bs.tab', function() {
+        cargarEstadias();
+    });
+
+    // Limpiar modal cuando se cierre
+    document.getElementById('modalEditarEstadia')?.addEventListener('hidden.bs.modal', function() {
+        const form = document.getElementById('formEditarEstadia');
+        if (form) {
+            form.reset();
+        }
+    });
+
+    // Cargar estadías desde el servidor
+    async function cargarEstadias() {
+        try {
+            const response = await fetch('/Ingreso/ObtenerEstadias');
+            const estadias = await response.json();
+            mostrarEstadias(estadias);
+        } catch (error) {
+            console.error('Error al cargar estadías:', error);
+            alert('Error al cargar las estadías');
+        }
+    }
+
+    // Mostrar estadías en la tabla
+    function mostrarEstadias(estadias) {
+        const tbody = document.getElementById('tbodyEstadias');
+        tbody.innerHTML = '';
+
+        if (estadias.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center">No hay estadías registradas</td></tr>';
+            return;
+        }
+
+        estadias.forEach(estadia => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${estadia.id}</td>
+                <td>${new Date(estadia.fechaIngreso).toLocaleDateString('es-AR')}</td>
+                <td>${estadia.nombreCliente}</td>
+                <td>${estadia.celular}</td>
+                <td>${estadia.patente}</td>
+                <td>${estadia.tipoVehiculo}</td>
+                <td>${estadia.diasEstadia}</td>
+                <td>$${estadia.monto.toLocaleString('es-AR')}</td>
+                <td>${estadia.dejoLlave ? 'Sí' : 'No'}</td>
+                <td>${estadia.descripcion || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary me-1" onclick="editarEstadia(${estadia.id})">
+                        <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <button class="btn btn-sm btn-danger me-1" onclick="eliminarEstadia(${estadia.id})">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="imprimirEstadia(${estadia.id})">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                    <a href="/Facturacion/Crear?estadiaId=${estadia.id}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-receipt"></i> Factura AFIP
+                    </a>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Editar estadía
+    async function editarEstadia(id) {
+        try {
+            const response = await fetch(`/Ingreso/ObtenerEstadia/${id}`);
+            const estadia = await response.json();
+            
+            // Llenar el modal con los datos
+            document.getElementById('editEstadiaId').value = estadia.id;
+            document.getElementById('editEstadiaNombre').value = estadia.nombreCliente;
+            document.getElementById('editEstadiaCelular').value = estadia.celular;
+            document.getElementById('editEstadiaPatente').value = estadia.patente;
+            document.getElementById('editEstadiaTipoVehiculo').value = estadia.tipoVehiculo;
+            document.getElementById('editEstadiaDescripcion').value = estadia.descripcion || '';
+            document.getElementById('editEstadiaDejoLlave').value = estadia.dejoLlave ? 'true' : 'false';
+            document.getElementById('editEstadiaDias').value = estadia.diasEstadia;
+            document.getElementById('editEstadiaMonto').value = estadia.monto;
+            
+            // Mostrar el modal
+            new bootstrap.Modal(document.getElementById('modalEditarEstadia')).show();
+        } catch (error) {
+            console.error('Error al cargar estadía:', error);
+            alert('Error al cargar los datos de la estadía');
+        }
+    }
+
+    // Guardar cambios de la estadía editada
+    document.getElementById('formEditarEstadia')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const data = {
+            Id: parseInt(document.getElementById('editEstadiaId').value),
+            NombreCliente: document.getElementById('editEstadiaNombre').value,
+            Celular: document.getElementById('editEstadiaCelular').value,
+            Patente: document.getElementById('editEstadiaPatente').value,
+            TipoVehiculo: document.getElementById('editEstadiaTipoVehiculo').value,
+            Descripcion: document.getElementById('editEstadiaDescripcion').value,
+            DejoLlave: document.getElementById('editEstadiaDejoLlave').value === 'true',
+            DiasEstadia: parseInt(document.getElementById('editEstadiaDias').value),
+            Monto: parseFloat(document.getElementById('editEstadiaMonto').value)
+        };
+        
+        try {
+            const response = await fetch('/Ingreso/ActualizarEstadia', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                alert('Estadía actualizada correctamente');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarEstadia'));
+                if (modal) {
+                    modal.hide();
+                }
+                cargarEstadias(); // Recargar la lista
+            } else {
+                const errorData = await response.json();
+                alert('Error al actualizar la estadía: ' + (errorData.mensaje || 'Error desconocido'));
+            }
+        } catch (error) {
+            console.error('Error al actualizar estadía:', error);
+            alert('Error al actualizar la estadía');
+        }
+    });
+
+    // Eliminar estadía
+    function eliminarEstadia(id) {
+        if (!confirm("¿Seguro que quieres eliminar esta estadía?")) return;
+
+        fetch(`/Ingreso/EliminarEstadia/${id}`, {
+            method: 'DELETE'
+        })
+        .then(r => {
+            if (r.ok) {
+                alert("Estadía eliminada");
+                cargarEstadias(); // Recargar la lista
+            } else {
+                alert("Error al eliminar");
+            }
+        });
+    }
+
+    // Imprimir estadía
+    async function imprimirEstadia(id) {
+        try {
+            const response = await fetch(`/Ingreso/ImprimirEstadia/${id}`);
+            if (response.ok) {
+                alert('Ticket de estadía enviado a imprimir correctamente');
+            } else {
+                const error = await response.json();
+                alert('Error al imprimir: ' + (error.mensaje || 'Error desconocido'));
+            }
+        } catch (error) {
+            console.error('Error al imprimir estadía:', error);
+            alert('Error de conexión al imprimir');
+        }
+    }
+
+    // Filtros para estadías
+    const btnFiltrarEstadias = document.getElementById('btnFiltrarEstadias');
+    const btnLimpiarFiltrosEstadias = document.getElementById('btnLimpiarFiltrosEstadias');
+    const btnRecargarEstadias = document.getElementById('btnRecargarEstadias');
+    
+    if (btnFiltrarEstadias) {
+        btnFiltrarEstadias.addEventListener('click', function() {
+            aplicarFiltrosEstadias();
+        });
+    }
+
+    if (btnLimpiarFiltrosEstadias) {
+        btnLimpiarFiltrosEstadias.addEventListener('click', function() {
+            const filtroPatente = document.getElementById('filtroPatenteEstadia');
+            const filtroCliente = document.getElementById('filtroClienteEstadia');
+            const filtroFecha = document.getElementById('filtroFechaEstadia');
+            
+            if (filtroPatente) filtroPatente.value = '';
+            if (filtroCliente) filtroCliente.value = '';
+            if (filtroFecha) filtroFecha.value = '';
+            cargarEstadias();
+        });
+    }
+
+    if (btnRecargarEstadias) {
+        btnRecargarEstadias.addEventListener('click', function() {
+            cargarEstadias();
+        });
+    }
+
+    async function aplicarFiltrosEstadias() {
+        const filtroPatente = document.getElementById('filtroPatenteEstadia');
+        const filtroCliente = document.getElementById('filtroClienteEstadia');
+        const filtroFecha = document.getElementById('filtroFechaEstadia');
+        
+        const patente = filtroPatente ? filtroPatente.value : '';
+        const cliente = filtroCliente ? filtroCliente.value : '';
+        const fecha = filtroFecha ? filtroFecha.value : '';
+        
+        try {
+            const params = new URLSearchParams();
+            if (patente) params.append('patente', patente);
+            if (cliente) params.append('cliente', cliente);
+            if (fecha) params.append('fecha', fecha);
+            
+            const response = await fetch(`/Ingreso/ObtenerEstadias?${params}`);
+            const estadias = await response.json();
+            mostrarEstadias(estadias);
+        } catch (error) {
+            console.error('Error al filtrar estadías:', error);
+            alert('Error al aplicar filtros');
+        }
+    }
+
+
+</script>
+<script>
+    (function(){
+      const $input = document.getElementById('scanInput');
+      const $btnCalcular = document.getElementById('btnCalcular');
+      const $btnLimpiar = document.getElementById('btnLimpiar');
+      const $resultado = document.getElementById('resultadoScan');
+      const $detalle = document.getElementById('detalleCobro');
+
+      const $outTipo = document.getElementById('outTipo');
+      const $outPatente = document.getElementById('outPatente');
+      const $outEntrada = document.getElementById('outEntrada');
+      const $outAhora = document.getElementById('outAhora');
+      const $outMin = document.getElementById('outMin');
+      const $outMonto = document.getElementById('outMonto');
+
+      function mostrarMensaje(ok, msg) {
+        $resultado.classList.remove('d-none', 'alert-success', 'alert-danger');
+        $resultado.classList.add(ok ? 'alert-success' : 'alert-danger');
+        $resultado.textContent = msg;
+      }
+
+      function limpiar() {
+        $input.value = '';
+        $resultado.classList.add('d-none');
+        $detalle.classList.add('d-none');
+        $input.focus();
+      }
+
+      async function calcular() {
+        const codigo = ($input.value || '').trim();
+        if (!codigo) {
+          mostrarMensaje(false, 'Ingresá o escaneá un código primero.');
+          return;
+        }
+        try {
+          const resp = await fetch('/Ingreso/CalcularCobroCodigo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo })
+          });
+          const data = await resp.json();
+
+          if (!data.ok) {
+            mostrarMensaje(false, data.mensaje || 'Error al calcular.');
+            $detalle.classList.add('d-none');
+            return;
+          }
+
+          mostrarMensaje(true, 'Cálculo ok. ¡Podés cobrar!');
+          $outTipo.textContent = data.tipo;
+          $outPatente.textContent = data.patente;
+          $outEntrada.textContent = data.horaEntrada;
+          $outAhora.textContent = data.horaActual;
+          $outMin.textContent = data.minutos;
+          $outMonto.textContent = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(data.monto);
+          $detalle.classList.remove('d-none');
+
+          // Limpia el input si tu lector manda Enter al final
+          // $input.value = '';
+        } catch (e) {
+          mostrarMensaje(false, 'No se pudo conectar con el servidor.');
+          $detalle.classList.add('d-none');
+        }
+      }
+
+      // Escáner suele enviar Enter al final → disparar cálculo
+      $input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          calcular();
+        }
+      });
+      $btnCalcular.addEventListener('click', calcular);
+      $btnLimpiar.addEventListener('click', limpiar);
+    })();
+</script>
+
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+}
