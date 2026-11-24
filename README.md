@@ -4,6 +4,24 @@ Aplicación web para administrar una playa de estacionamiento: ingresos y egreso
 
 > Este repositorio es una versión sin datos ni configuración del negocio: nombres, CUIT y direcciones de los tickets son de ejemplo.
 
+## Capturas
+
+**Ingreso de vehículos**
+
+![Nuevo ingreso](docs/capturas/nuevo-ingreso.png)
+
+**Ingresos del día, con impresión de ticket y factura electrónica**
+
+![Ingresos registrados](docs/capturas/ingresos-registrados.png)
+
+**Control de cierre: qué entró, qué falta cobrar y qué salió**
+
+![Control de cierre](docs/capturas/control-de-cierre.png)
+
+**Estadías prolongadas, con registro de cliente, llave y monto**
+
+![Estadía prolongada](docs/capturas/estadia-prolongada.png)
+
 ## Qué hace
 
 - **Ingresos y egresos** de vehículos, con cálculo del cobro según tramos de tarifa configurables.
